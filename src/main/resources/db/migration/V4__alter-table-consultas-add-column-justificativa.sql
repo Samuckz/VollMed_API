@@ -1,0 +1,1 @@
+alter table consultas add justificativa varchar(100);
