@@ -10,6 +10,7 @@ import med.voll.api.models.medicos.MedicoModel;
 import med.voll.api.models.medicos.MedicoRepository;
 import med.voll.api.models.pacientes.PacienteModel;
 import med.voll.api.models.pacientes.PacienteRepository;
+import med.voll.api.utils.DadosErroValidacao;
 import med.voll.api.utils.DataHora;
 import med.voll.api.utils.DataHoraDTO;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +18,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -30,6 +33,7 @@ public class ConsultaServiceImpl implements PoliticaConsultas {
     @Autowired
     PacienteRepository pacienteRepository;
 
+
     @Autowired
     DataHora dataHora;
 
@@ -41,9 +45,42 @@ public class ConsultaServiceImpl implements PoliticaConsultas {
         return consultaDTO;
     }
 
-    public Boolean validarHorarioFuncionamento(DataHoraDTO dataHoraDTO){
+    public Boolean validarHorarioFuncionamento(DataHoraDTO dataHoraDTO) throws DadosErroValidacao {
         if (dataHoraDTO.getHora() < 7 || dataHoraDTO.getHora() > 19){
-            return false;
+            throw new DadosErroValidacao("hora", "A clínica não funciona neste horário, favor escolher um horário entre 07:00 e 19:00 horas");
+        }
+        return true;
+    }
+
+    public Boolean verificaExistenciaMedico(ConsultaDTO consultaDTO) throws DadosErroValidacao{
+        medicoRepository.getById(consultaDTO.getMedico());
+        return true;
+    }
+
+    public Boolean verificaExistenciaPaciente(ConsultaDTO consultaDTO) throws DadosErroValidacao{
+        pacienteRepository.getById(consultaDTO.getPaciente());
+        return true;
+    }
+
+    public Boolean verificaDisponibilidadeMedico(ConsultaDTO consultaDTO, Pageable paginacao) throws DadosErroValidacao{
+        var consultas = consultaRepository.findAllByAtivoTrue(paginacao).stream().filter(
+                consultaModel -> {
+                    if(consultaModel.getMedico() == consultaDTO.getMedico()){
+                        if(consultaModel.getDataHora().getDia() == consultaDTO.getDataHoraDTO().getDia() &&
+                                consultaModel.getDataHora().getMes() == consultaDTO.getDataHoraDTO().getMes() &&
+                                consultaModel.getDataHora().getAno() == consultaDTO.getDataHoraDTO().getAno() &&
+                                consultaModel.getDataHora().getHora() == consultaDTO.getDataHoraDTO().getHora()){
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+
+
+        ).collect(Collectors.toList());
+
+        if(!consultas.isEmpty()){
+            throw new DadosErroValidacao("Médico", "O(A) médico(a) não estará disponível neste horário");
         }
 
         return true;
@@ -52,6 +89,32 @@ public class ConsultaServiceImpl implements PoliticaConsultas {
 //    public Boolean antecedenciaMinima(DataHoraDTO dataHoraDTO){
 //
 //    }
+
+    public Boolean naoPermitirDuasConsultasPacienteDia(ConsultaDTO consultaDTO, Pageable paginacao) throws DadosErroValidacao {
+        var consultas = consultaRepository.findAllByAtivoTrue(paginacao).stream().filter(
+                consultaModel -> {
+                    if(consultaModel.getPaciente() == consultaDTO.getPaciente()){
+                        if(consultaModel.getDataHora().getDia() == consultaDTO.getDataHoraDTO().getDia() &&
+                                consultaModel.getDataHora().getMes() == consultaDTO.getDataHoraDTO().getMes() &&
+                                consultaModel.getDataHora().getAno() == consultaDTO.getDataHoraDTO().getAno() &&
+                                consultaModel.getDataHora().getHora() == consultaDTO.getDataHoraDTO().getHora()){
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+
+
+        ).collect(Collectors.toList());
+
+        if(!consultas.isEmpty()){
+            throw new DadosErroValidacao("Paciente", "Este paciente já apresenta consulta cadastrada neste dia");
+        }
+
+        return true;
+
+
+    }
 
     @Transactional(readOnly = true)
     @Override
@@ -65,11 +128,6 @@ public class ConsultaServiceImpl implements PoliticaConsultas {
             return new ConsultaResponseDTO(consulta.getId(),medicoName.getNome(), pacienteName.getNome(), dataHora.toString(consulta.getDataHora()));
                 }
         );
-
-    }
-
-    @Override
-    public void excluir(Long id) {
 
     }
 

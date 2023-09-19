@@ -10,7 +10,7 @@ import org.springframework.validation.FieldError;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class DadosErroValidacao {
+public class DadosErroValidacao extends Throwable {
     private String campo;
     private String message;
 
