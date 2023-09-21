@@ -6,6 +6,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import javax.naming.AuthenticationException;
 import javax.persistence.EntityNotFoundException;
 import java.util.stream.Collectors;
 
@@ -21,6 +22,11 @@ public class TratadorDeErros {
     public ResponseEntity tratarErro400(MethodArgumentNotValidException e){
         var error = e.getFieldErrors();
         return ResponseEntity.badRequest().body(error.stream().map(DadosErroValidacao::new).collect(Collectors.toList()));
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity tratarErroAutenticacao(AuthenticationException e){
+        return ResponseEntity.status(HttpStatus.PROXY_AUTHENTICATION_REQUIRED).body("Necessária autenticacao do servidor");
     }
 
 
