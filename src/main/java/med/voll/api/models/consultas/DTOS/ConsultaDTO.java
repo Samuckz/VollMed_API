@@ -1,7 +1,7 @@
 package med.voll.api.models.consultas.DTOS;
 
 import lombok.Getter;
-import med.voll.api.utils.DataHoraDTO;
+import med.voll.api.utils.DataHora.DataHoraDTO;
 
 import javax.validation.constraints.NotNull;
 

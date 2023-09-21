@@ -1,4 +1,4 @@
-package med.voll.api.utils;
+package med.voll.api.utils.exception;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

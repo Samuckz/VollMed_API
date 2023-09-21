@@ -1,4 +1,4 @@
-package med.voll.api.utils;
+package med.voll.api.utils.DataHora;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

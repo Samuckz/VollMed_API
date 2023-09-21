@@ -21,8 +21,6 @@ public class TokenService {
 
     public String generateToken(UsuarioModel usuario){
 
-        System.out.println(secret);
-
         try{
             var algoritmo = Algorithm.HMAC256(secret); // insira uma senha secreta da sua API
             String token = JWT.create()
@@ -35,6 +33,21 @@ public class TokenService {
 //            O token funciona como o session do programa, ele guarda as informações do código e lanca os dados que voce deseja salvar,seja identificador, permissoes, etc
 
             return token;
+        } catch (JWTCreationException exception){
+            throw new RuntimeException("Erro ao gerar token jwt", exception);
+
+        }
+    }
+
+    public String getSubject(String tokenJWT){
+        try{
+            var algoritmo = Algorithm.HMAC256(secret); // insira uma senha secreta da sua API
+            return JWT.require(algoritmo)
+                    .withIssuer("API Voll.med")
+                    .build()
+                    .verify(tokenJWT) // verificar se o token esta valido de acordo com o issuer passado
+                    .getSubject();
+
         } catch (JWTCreationException exception){
             throw new RuntimeException("Erro ao gerar token jwt", exception);
 

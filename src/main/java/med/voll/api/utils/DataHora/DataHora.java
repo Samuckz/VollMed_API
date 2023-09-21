@@ -1,10 +1,9 @@
-package med.voll.api.utils;
+package med.voll.api.utils.DataHora;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.springframework.context.annotation.ComponentScan;
 import org.springframework.stereotype.Component;
 
 @Getter

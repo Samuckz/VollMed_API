@@ -3,7 +3,7 @@ package med.voll.api.models.consultas;
 import lombok.*;
 import med.voll.api.models.consultas.DTOS.ConsultaDTO;
 import med.voll.api.utils.Cancelamento;
-import med.voll.api.utils.DataHora;
+import med.voll.api.utils.DataHora.DataHora;
 
 import javax.persistence.*;
 

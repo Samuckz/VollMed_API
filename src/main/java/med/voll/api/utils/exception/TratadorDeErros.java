@@ -1,4 +1,4 @@
-package med.voll.api.utils;
+package med.voll.api.utils.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
