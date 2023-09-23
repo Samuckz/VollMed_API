@@ -19,12 +19,14 @@ public class TokenService {
     @Value("${api.security.token.secret}") // Passa o valor que vc deseja que a variavel receba
     private String secret;
 
+    private static final String ISSUER = "API Voll.med";
+
     public String generateToken(UsuarioModel usuario){
 
         try{
             var algoritmo = Algorithm.HMAC256(secret); // insira uma senha secreta da sua API
             String token = JWT.create()
-                    .withIssuer("API Voll.med") // identificacao da aplicacao
+                    .withIssuer(ISSUER) // identificacao da aplicacao
                     .withSubject(usuario.getLogin())
                     .withClaim("id", usuario.getId())
                     .withExpiresAt(dataExpiracao())
@@ -43,13 +45,13 @@ public class TokenService {
         try{
             var algoritmo = Algorithm.HMAC256(secret); // insira uma senha secreta da sua API
             return JWT.require(algoritmo)
-                    .withIssuer("API Voll.med")
+                    .withIssuer(ISSUER)
                     .build()
                     .verify(tokenJWT) // verificar se o token esta valido de acordo com o issuer passado
                     .getSubject();
 
         } catch (JWTCreationException exception){
-            throw new RuntimeException("Erro ao gerar token jwt", exception);
+            throw new RuntimeException("Token JWT inválido ou expirado: " + tokenJWT);
 
         }
     }

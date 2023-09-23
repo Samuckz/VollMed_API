@@ -29,12 +29,16 @@ public class AuthenticationController {
 
     @PostMapping
     public ResponseEntity efeutarLogin(@RequestBody @Valid LoginDTO login){
-        // DTO do Spring Security para dados de authenticacao
-        var authenticationToken = new UsernamePasswordAuthenticationToken(login.getLogin(), login.getSenha());
-        var authentication = manager.authenticate(authenticationToken);
+        try{
+            // DTO do Spring Security para dados de authenticacao
+            var authenticationToken = new UsernamePasswordAuthenticationToken(login.getLogin(), login.getSenha());
+            var authentication = manager.authenticate(authenticationToken);
 
-        var tokenJWT = tokenService.generateToken((UsuarioModel) authentication.getPrincipal());
+            var tokenJWT = tokenService.generateToken((UsuarioModel) authentication.getPrincipal());
 
-        return ResponseEntity.ok(new TokenJWT(tokenJWT));
+            return ResponseEntity.ok(new TokenJWT(tokenJWT));
+        } catch (Exception e){
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 }
