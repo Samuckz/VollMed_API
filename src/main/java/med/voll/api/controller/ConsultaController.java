@@ -38,11 +38,9 @@ public class ConsultaController {
 
     @PostMapping
     @Transactional
-    public ResponseEntity<ConsultaModel> cadastrar(@RequestBody @Valid ConsultaDTO consultaDTO){
-//        consultaService.validateConsulta(consultaDTO);
-        ConsultaModel response = consultaRepository.save(new ConsultaModel(consultaDTO));
-        return new ResponseEntity<>(response, HttpStatus.CREATED);
-
+    public ResponseEntity agendar(@RequestBody @Valid ConsultaDTO consultaDTO){
+        var response = consultaService.validarConsulta(consultaDTO);
+        return ResponseEntity.ok(response);
 
     }
 
@@ -50,16 +48,19 @@ public class ConsultaController {
     public Page<ConsultaResponseDTO> listar(
             @PageableDefault(sort = "id", direction = Sort.Direction.ASC, page = 0, size = 10) final Pageable paginacao
     ){
-        return consultaService.listarConsultas(paginacao);
+        return consultaRepository.findAllByAtivoTrue(paginacao);
     }
 
 
     @PostMapping(path = "/cancelar")
     @Transactional
-    public ResponseEntity cancelar(@RequestBody @Valid CancelarConsultaDTO consulta){
-        consultaService.cancelar(consulta);
+    public ResponseEntity cancelar(@RequestBody @Valid CancelarConsultaDTO cancelarConsultaDTO){
+        var consulta = consultaService.cancelar(cancelarConsultaDTO);
+        var consultaCancelada = consultaRepository.getById(consulta.getId());
 
-        return ResponseEntity.ok("Consulta cancelada com sucesso");
+        consultaCancelada.cancelar();
+
+        return ResponseEntity.ok(cancelarConsultaDTO);
     }
 
 

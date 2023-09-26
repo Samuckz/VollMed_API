@@ -4,6 +4,9 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import med.voll.api.models.consultas.ConsultaModel;
+
+import java.time.LocalDateTime;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -13,7 +16,10 @@ public class ConsultaResponseDTO {
     private Long id;
     private String medico;
     private String paciente;
-    private String dataHora;
+    private LocalDateTime dataHora;
 
 
+    public ConsultaResponseDTO(ConsultaModel consulta) {
+        this(consulta.getId(), consulta.getMedico().getNome(), consulta.getPaciente().getNome(), consulta.getData());
+    }
 }

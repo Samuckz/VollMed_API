@@ -6,20 +6,18 @@ import med.voll.api.models.consultas.ConsultaRepository;
 import med.voll.api.models.consultas.DTOS.CancelarConsultaDTO;
 import med.voll.api.models.consultas.DTOS.ConsultaDTO;
 import med.voll.api.models.consultas.DTOS.ConsultaResponseDTO;
+import med.voll.api.models.consultas.validacoes.agendamento.ValidadorAgendamentoDeConsulta;
+import med.voll.api.models.consultas.validacoes.cancelamento.ValidadorCancelamentoConsulta;
 import med.voll.api.models.medicos.MedicoModel;
 import med.voll.api.models.medicos.MedicoRepository;
-import med.voll.api.models.pacientes.PacienteModel;
 import med.voll.api.models.pacientes.PacienteRepository;
-import med.voll.api.utils.exception.DadosErroValidacao;
-import med.voll.api.utils.DataHora.DataHora;
-import med.voll.api.utils.DataHora.DataHoraDTO;
+import med.voll.api.utils.exception.ValidacaoException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.stream.Collectors;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -33,112 +31,78 @@ public class ConsultaServiceImpl implements PoliticaConsultas {
     @Autowired
     PacienteRepository pacienteRepository;
 
+    @Autowired
+    private List<ValidadorAgendamentoDeConsulta> validadores;
+    // Este método faz com que o Spring procure todas as classes que implementam a interface referenciada
 
     @Autowired
-    DataHora dataHora;
-
-    public ConsultaDTO validarConsulta(ConsultaDTO consultaDTO){
-
-        // === Horário de funcionamento da Clinica ===
+    private List<ValidadorCancelamentoConsulta> cancelamentoConsultas;
 
 
-        return consultaDTO;
-    }
+    public ConsultaResponseDTO validarConsulta(ConsultaDTO consultaDTO){
 
-    public Boolean validarHorarioFuncionamento(DataHoraDTO dataHoraDTO) throws DadosErroValidacao {
-        if (dataHoraDTO.getHora() < 7 || dataHoraDTO.getHora() > 19){
-            throw new DadosErroValidacao("hora", "A clínica não funciona neste horário, favor escolher um horário entre 07:00 e 19:00 horas");
-        }
-        return true;
-    }
-
-    public Boolean verificaExistenciaMedico(ConsultaDTO consultaDTO) throws DadosErroValidacao{
-        medicoRepository.getById(consultaDTO.getMedico());
-        return true;
-    }
-
-    public Boolean verificaExistenciaPaciente(ConsultaDTO consultaDTO) throws DadosErroValidacao{
-        pacienteRepository.getById(consultaDTO.getPaciente());
-        return true;
-    }
-
-    public Boolean verificaDisponibilidadeMedico(ConsultaDTO consultaDTO, Pageable paginacao) throws DadosErroValidacao{
-        var consultas = consultaRepository.findAllByAtivoTrue(paginacao).stream().filter(
-                consultaModel -> {
-                    if(consultaModel.getMedico() == consultaDTO.getMedico()){
-                        if(consultaModel.getDataHora().getDia() == consultaDTO.getDataHoraDTO().getDia() &&
-                                consultaModel.getDataHora().getMes() == consultaDTO.getDataHoraDTO().getMes() &&
-                                consultaModel.getDataHora().getAno() == consultaDTO.getDataHoraDTO().getAno() &&
-                                consultaModel.getDataHora().getHora() == consultaDTO.getDataHoraDTO().getHora()){
-                            return true;
-                        }
-                    }
-                    return false;
-                }
-
-
-        ).collect(Collectors.toList());
-
-        if(!consultas.isEmpty()){
-            throw new DadosErroValidacao("Médico", "O(A) médico(a) não estará disponível neste horário");
+        if(!pacienteRepository.existsById(consultaDTO.getPaciente())){
+            throw new ValidacaoException("Id do paciente informado não existe!");
         }
 
-        return true;
-    }
-
-//    public Boolean antecedenciaMinima(DataHoraDTO dataHoraDTO){
-//
-//    }
-
-    public Boolean naoPermitirDuasConsultasPacienteDia(ConsultaDTO consultaDTO, Pageable paginacao) throws DadosErroValidacao {
-        var consultas = consultaRepository.findAllByAtivoTrue(paginacao).stream().filter(
-                consultaModel -> {
-                    if(consultaModel.getPaciente() == consultaDTO.getPaciente()){
-                        if(consultaModel.getDataHora().getDia() == consultaDTO.getDataHoraDTO().getDia() &&
-                                consultaModel.getDataHora().getMes() == consultaDTO.getDataHoraDTO().getMes() &&
-                                consultaModel.getDataHora().getAno() == consultaDTO.getDataHoraDTO().getAno() &&
-                                consultaModel.getDataHora().getHora() == consultaDTO.getDataHoraDTO().getHora()){
-                            return true;
-                        }
-                    }
-                    return false;
-                }
-
-
-        ).collect(Collectors.toList());
-
-        if(!consultas.isEmpty()){
-            throw new DadosErroValidacao("Paciente", "Este paciente já apresenta consulta cadastrada neste dia");
+        if(consultaDTO.getMedico() != null && !medicoRepository.existsById(consultaDTO.getMedico())){
+            throw new ValidacaoException("Id do médico informado não existe!");
         }
 
-        return true;
+        validadores.forEach(v -> v.validar(consultaDTO));
+
+        var medico = escolherMedico(consultaDTO);
+        if(medico == null){
+            throw new ValidacaoException("Não existe médico disponível nessa data");
+        }
+
+        var paciente = pacienteRepository.getById(consultaDTO.getPaciente());
+        var consulta = new ConsultaModel(null, medico, paciente, consultaDTO.getData());
+
+        consultaRepository.save(consulta);
+
+        return new ConsultaResponseDTO(consulta);
+    }
+
+    private MedicoModel escolherMedico(ConsultaDTO consultaDTO) {
+        if(consultaDTO.getMedico() != null){
+            return medicoRepository.getById(consultaDTO.getMedico());
+        }
+
+        if(consultaDTO.getEspecialidade() == null){
+            throw new ValidacaoException("Especialidade é obrigatória quando médico não for escolhida");
+        }
+
+//        Pageable pageable = PageRequest.of(0, 1);
+        Pageable pageable = PageRequest.of(0,1);
+        List<MedicoModel> medicos = medicoRepository.escolherMedicoAleatorioLivreNaData(consultaDTO.getEspecialidade(), consultaDTO.getData(), pageable);
+        MedicoModel medicoAleatorio = medicos.isEmpty() ? null : medicos.get(0);
+
+        return medicoAleatorio;
 
 
     }
 
-    @Transactional(readOnly = true)
-    @Override
-    public Page<ConsultaResponseDTO> listarConsultas(
-            Pageable paginacao
-    ){
-        return consultaRepository.findAllByAtivoTrue(paginacao).map(consulta ->{
-            MedicoModel medicoName = medicoRepository.getById(consulta.getMedico());
-            PacienteModel pacienteName = pacienteRepository.getById(consulta.getPaciente());
+    public CancelarConsultaDTO cancelar(CancelarConsultaDTO cancelarConsultaDTO){
 
-            return new ConsultaResponseDTO(consulta.getId(),medicoName.getNome(), pacienteName.getNome(), dataHora.toString(consulta.getDataHora()));
-                }
-        );
+        if(!consultaRepository.existsById(cancelarConsultaDTO.getId())){
+            throw new ValidacaoException("Não foi encontrada nenhuma consulta com o Id informado!");
+        }
 
-    }
+        cancelamentoConsultas.forEach(v -> v.validar(cancelarConsultaDTO));
 
-    @Transactional
-    @Override
-    public void cancelar(CancelarConsultaDTO consultaDTO){
-        ConsultaModel response = consultaRepository.getById(consultaDTO.getId());
-        response.setAtivo(false);
-//        response.setJustificativa(consultaDTO.getCancelamento());
+        return cancelarConsultaDTO;
 
     }
 
 
 }
+
+/*
+    APLICANDO PADRÕES SOLID
+
+    S -> Single Responsability Principle: Cada classe de validação tewm uma unica responsabilidae
+    O -> Open Closed Principle: Classe fechada para modificação, mas aberta para extensão
+    D -> Dependency Inversion Principle: A nossa classe service depende de uma abstração
+
+ */

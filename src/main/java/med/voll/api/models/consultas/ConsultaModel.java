@@ -1,11 +1,12 @@
 package med.voll.api.models.consultas;
 
 import lombok.*;
-import med.voll.api.models.consultas.DTOS.ConsultaDTO;
+import med.voll.api.models.medicos.MedicoModel;
+import med.voll.api.models.pacientes.PacienteModel;
 import med.voll.api.utils.Cancelamento;
-import med.voll.api.utils.DataHora.DataHora;
 
 import javax.persistence.*;
+import java.time.LocalDateTime;
 
 @Builder
 @NoArgsConstructor
@@ -20,21 +21,26 @@ public class ConsultaModel {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private Long medico;
-    private Long paciente;
 
-    @Embedded
-    private DataHora dataHora;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "medico_id")
+    private MedicoModel medico;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "paciente_id")
+    private PacienteModel paciente;
+
+    private LocalDateTime data;
     private Boolean ativo = true;
-    private Boolean done = false;
 
     private Cancelamento justificativa;
 
-    public ConsultaModel(ConsultaDTO consultaDTO) {
-        this.medico = consultaDTO.getMedico();
-        this.paciente = consultaDTO.getPaciente();
-        this.dataHora = new DataHora(consultaDTO.getDataHoraDTO());
-
+    public ConsultaModel(Long id, MedicoModel medico, PacienteModel paciente, LocalDateTime data) {
+        this.medico = medico;
+        this.paciente = paciente;
+        this.data = data;
     }
-
+    public void cancelar(){
+        this.ativo = false;
+    }
 }

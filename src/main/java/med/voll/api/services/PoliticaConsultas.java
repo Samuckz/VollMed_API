@@ -8,12 +8,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 public interface PoliticaConsultas {
 
-    @Transactional(readOnly = true)
-    Page<ConsultaResponseDTO> listarConsultas(
-            Pageable paginacao
-    );
-
-
-    @Transactional
-    void cancelar(CancelarConsultaDTO consultaDTO);
+//    @Transactional(readOnly = true)
+//    Page<ConsultaResponseDTO> listarConsultas(
+//            Pageable paginacao
+//    );
+//
+//
+//    @Transactional
+//    void cancelar(CancelarConsultaDTO consultaDTO);
 }
